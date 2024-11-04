@@ -60,5 +60,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVNTargetMC() {
     TargetRegistry::RegisterMCSubtargetInfo(*T, createRISCVNMCSubtargetInfo);
     TargetRegistry::RegisterMCRegInfo(*T, createRISCVNMCRegisterInfo);
     TargetRegistry::RegisterMCInstPrinter(*T, createRISCVNMCInstPrinter);
+    TargetRegistry::RegisterMCAsmBackend(*T, createRISCVNAsmBackend);
+    TargetRegistry::RegisterMCCodeEmitter(*T, createRISCVNMCCodeEmitter);
   }
 }

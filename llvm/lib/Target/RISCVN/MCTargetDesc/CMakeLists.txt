@@ -2,6 +2,9 @@ add_llvm_component_library(LLVMRISCVNDesc
         RISCVNMCTargetDesc.cpp
         RISCVNInstPrinter.cpp
         RISCVNMCAsmInfo.cpp
+        RISCVNAsmBackend.cpp
+        RISCVNMCCodeEmitter.cpp
+        RISCVNELFObjectWriter.cpp
 
         LINK_COMPONENTS
         MC

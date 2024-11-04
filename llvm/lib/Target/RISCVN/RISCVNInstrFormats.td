@@ -6,7 +6,7 @@ class RISCVNOpcode<string name, bits<7> val, bits<3> funct3> {
 }
 
 def OPC_ADDI : RISCVNOpcode<"ADDI", 0b0010011, 0b000>;
-def OPC_JALR : RISCVNOpcode<"JALR", 0b1101111, 0b000>;
+def OPC_JALR : RISCVNOpcode<"JALR", 0b1100111, 0b000>;
 
 class RV32IInst<dag outs, dag ins, string asmstr, list<dag> pattern>
     : Instruction {
