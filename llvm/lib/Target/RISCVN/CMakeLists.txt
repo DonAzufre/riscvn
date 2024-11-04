@@ -43,6 +43,6 @@ add_llvm_target(RISCVNCodeGen
         RISCVN
         )
 
-# add_subdirectory(AsmParser)        
+add_subdirectory(AsmParser)        
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
