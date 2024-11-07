@@ -11,6 +11,7 @@ tablegen(LLVM RISCVNGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM RISCVNGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM RISCVNGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM RISCVNGenMCPseudoLowering.inc -gen-pseudo-lowering)
+tablegen(LLVM RISCVNGenDisassemblerTables.inc -gen-disassembler)
 
 add_public_tablegen_target(RISCVNCommonTableGen)
 
@@ -43,6 +44,7 @@ add_llvm_target(RISCVNCodeGen
         RISCVN
         )
 
-add_subdirectory(AsmParser)        
+add_subdirectory(AsmParser) 
+add_subdirectory(Disassembler)       
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
