@@ -525,6 +525,10 @@ createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen,
                              bool EABI);
 
 std::unique_ptr<TargetCodeGenInfo>
+createRISCVNTargetCodeGenInfo(CodeGenModule &CGM);
+                             
+                             
+std::unique_ptr<TargetCodeGenInfo>
 createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>

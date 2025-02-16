@@ -131,6 +131,7 @@ add_clang_library(clangCodeGen
   Targets/NVPTX.cpp
   Targets/PNaCl.cpp
   Targets/PPC.cpp
+  Targets/RISCVN.cpp
   Targets/RISCV.cpp
   Targets/SPIR.cpp
   Targets/Sparc.cpp
