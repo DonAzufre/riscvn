@@ -2,4 +2,4 @@
 
 using namespace llvm;
 
-RISCVNMCAsmInfo::RISCVNMCAsmInfo(const Triple &TT) { CommentString = "//"; }
+RISCVNMCAsmInfo::RISCVNMCAsmInfo(const Triple &TT) { CommentString = "#"; }
