@@ -1,4 +1,6 @@
 #include "RISCVNInstPrinter.h"
+
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
@@ -27,7 +29,14 @@ void RISCVNInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     O << formatImm((int32_t)Op.getImm());
   } else {
     assert(Op.isExpr() && "Expected an expression");
+    Op.getExpr()->print(O, &MAI);
   }
+}
+void RISCVNInstPrinter::printJmpTargetOperand(const MCInst *MI,
+                                              uint64_t Address, unsigned OpNo,
+                                              raw_ostream &O,
+                                              const char *Modifier) {
+  O << __PRETTY_FUNCTION__;
 }
 
 const char *RISCVNInstPrinter::getRegisterName(MCRegister Reg) {

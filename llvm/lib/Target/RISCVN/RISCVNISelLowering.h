@@ -6,7 +6,12 @@
 namespace llvm {
 class RISCVNSubtarget;
 namespace RISCVNISD {
-enum NodeType : unsigned { FIRST_NUMBER = ISD::BUILTIN_OP_END, RET_GLUE };
+enum NodeType : unsigned {
+  FIRST_NUMBER = ISD::BUILTIN_OP_END,
+  RET_GLUE,
+  HI,
+  ADD_LO,
+};
 }
 
 class RISCVNTargetLowering : public TargetLowering {
@@ -29,6 +34,11 @@ private:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
+
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+
+public:
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 };
 } // namespace llvm
 

@@ -21,7 +21,6 @@ add_llvm_target(RISCVNCodeGen
         RISCVNInstrInfo.cpp
         RISCVNISelDAGToDAG.cpp
         RISCVNISelLowering.cpp
-        RISCVNMCInstLower.cpp
         RISCVNRegisterInfo.cpp
         RISCVNSubtarget.cpp
         RISCVNTargetMachine.cpp

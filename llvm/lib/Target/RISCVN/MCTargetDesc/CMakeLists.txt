@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMRISCVNDesc
         RISCVNAsmBackend.cpp
         RISCVNMCCodeEmitter.cpp
         RISCVNELFObjectWriter.cpp
+        RISCVNMCExpr.cpp
 
         LINK_COMPONENTS
         MC

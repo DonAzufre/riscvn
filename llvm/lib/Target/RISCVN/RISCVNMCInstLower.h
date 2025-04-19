@@ -1,6 +1,7 @@
 #ifndef LLVM_LIB_TARGET_RISCVN_RISCVNMCINSTLOWER_H
 #define LLVM_LIB_TARGET_RISCVN_RISCVNMCINSTLOWER_H
 
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -20,6 +21,8 @@ public:
       : Ctx(Ctx), Printer(Printer) {}
 
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
+
+  MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
 };
 } // namespace llvm
 

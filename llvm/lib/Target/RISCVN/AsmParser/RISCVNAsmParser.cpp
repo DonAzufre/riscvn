@@ -56,6 +56,7 @@ public:
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "RISCVNGenAsmMatcher.inc"
+
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
   };
 
@@ -341,6 +342,16 @@ bool RISCVNAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     // Attempt to parse token as an immediate
     if (parseImmediate(Operands).isSuccess()) {
       if (getParser().getTok().is(AsmToken::Comma)) {
+        getParser().Lex();
+      }
+      else if (getParser().getTok().is(AsmToken::LParen)) {
+        // imm ( reg )
+        getParser().Lex();
+        assert(parseRegister(Operands).isSuccess());
+        if (getParser().getTok().isNot(AsmToken::RParen)) {
+          auto loc = getLexer().getLoc();
+          return Error(loc, "expected ')'");
+        }
         getParser().Lex();
       }
     } else {
