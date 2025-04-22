@@ -36,7 +36,8 @@ void RISCVNInstPrinter::printJmpTargetOperand(const MCInst *MI,
                                               uint64_t Address, unsigned OpNo,
                                               raw_ostream &O,
                                               const char *Modifier) {
-  O << __PRETTY_FUNCTION__;
+  assert(MI->getOperand(OpNo).isExpr() && "jmptarget must be a label(Expr).");
+  MI->getOperand(OpNo).getExpr()->print(O, &MAI);
 }
 
 const char *RISCVNInstPrinter::getRegisterName(MCRegister Reg) {

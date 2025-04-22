@@ -116,6 +116,10 @@ public:
   bool isImm() const override { return Kind == Immediate; }
   bool isMem() const override { return false; }
 
+  bool isSImm12() const {
+    report_fatal_error("riscvn: RISCVNOperand isSImm12 not implemented");
+  }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
 

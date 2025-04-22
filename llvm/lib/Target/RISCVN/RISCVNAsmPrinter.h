@@ -10,6 +10,7 @@ class LLVM_LIBRARY_VISIBILITY RISCVNAsmPrinter : public AsmPrinter {
 public:
   explicit RISCVNAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer);
+  void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
 
   StringRef getPassName() const override { return "RISCVN Assembly Printer"; }
 

@@ -1,4 +1,5 @@
 #include "RISCVNMCTargetDesc.h"
+#include "MCTargetDesc/RISCVNBaseInfo.h"
 #include "RISCVNInstPrinter.h"
 #include "RISCVNMCAsmInfo.h"
 #include "TargetInfo/RISCVNTargetInfo.h"

@@ -36,6 +36,7 @@ private:
                       SelectionDAG &DAG) const override;
 
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
 
 public:
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;

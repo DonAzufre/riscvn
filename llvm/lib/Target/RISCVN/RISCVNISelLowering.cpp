@@ -19,7 +19,12 @@ RISCVNTargetLowering::RISCVNTargetLowering(const TargetMachine &TM,
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
 
+  setBooleanContents(ZeroOrOneBooleanContent);
+
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT, MVT::i32, Custom);
+
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 }
 
 SDValue RISCVNTargetLowering::LowerFormalArguments(
@@ -131,6 +136,29 @@ SDValue RISCVNTargetLowering::LowerGlobalAddress(SDValue Op,
 
   return DAG.getNode(RISCVNISD::ADD_LO, DL, Ty, MNHi, AddrLo);
 }
+SDValue RISCVNTargetLowering::LowerSelect(SDValue Op, SelectionDAG &DAG) const {
+
+  report_fatal_error("riscvn: unimplemented lower select");
+  SDLoc DL(Op);
+  SDValue Cond = Op.getOperand(0);
+  SDValue TrueVal = Op.getOperand(1);
+  SDValue FalseVal = Op.getOperand(2);
+
+  // if (Cond.getValueType() != MVT::i1) {
+  //   Cond = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Cond);
+  // }
+
+  Cond = DAG.getSetCC(DL, MVT::i1, Cond,
+                      DAG.getConstant(0, DL, Cond.getValueType()), ISD::SETNE);
+
+  Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i32, Cond);
+  SDValue NotCond = DAG.getNode(ISD::XOR, DL, MVT::i32, Cond,
+                                DAG.getConstant(-1, DL, MVT::i32));
+  SDValue TruePart = DAG.getNode(ISD::AND, DL, MVT::i32, TrueVal, Cond);
+  SDValue FalsePart = DAG.getNode(ISD::AND, DL, MVT::i32, FalseVal, NotCond);
+
+  return DAG.getNode(ISD::OR, DL, MVT::i32, TruePart, FalsePart);
+}
 
 SDValue RISCVNTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -139,6 +167,8 @@ SDValue RISCVNTargetLowering::LowerOperation(SDValue Op,
     report_fatal_error("riscvn: unimplemented operand");
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::SELECT:
+    return LowerSelect(Op, DAG);
   }
   return TargetLowering::LowerOperation(Op, DAG);
 }

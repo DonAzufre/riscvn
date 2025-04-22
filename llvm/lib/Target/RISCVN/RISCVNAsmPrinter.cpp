@@ -14,6 +14,9 @@ using namespace llvm;
 RISCVNAsmPrinter::RISCVNAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {}
+void RISCVNAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
+  OutStreamer->emitLabel(MBB.getSymbol());
+}
 
 void RISCVNAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (emitPseudoExpansionLowering(*OutStreamer, MI)) {
@@ -51,6 +54,9 @@ void RISCVNAsmPrinter::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       // MI->dump();
       // report_fatal_error("riscvn: unimplemented asm printer lower frameindex");
       MCOp = MCOperand::createReg(RISCVN::X2);
+      break;
+    case MachineOperand::MO_MachineBasicBlock:
+      MCOp = LowerSymbolOperand(MO, MO.getMBB()->getSymbol());
       break;
     }
 

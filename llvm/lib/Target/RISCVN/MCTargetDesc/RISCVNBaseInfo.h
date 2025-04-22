@@ -20,6 +20,14 @@ enum {
 
 }
 
+namespace RISCVNOp {
+
+enum OperandType : unsigned {
+  OPERAND_SIMM12,
+};
+
+}
+
 }
 
 #endif //LLVM_LIB_TARGET_RISCVN_MCTARGETDESC_RISCVNBASEINFO_H

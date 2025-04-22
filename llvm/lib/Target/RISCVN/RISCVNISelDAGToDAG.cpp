@@ -25,15 +25,14 @@ void RISCVNDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
-    case ISD::FrameIndex: {
-      SDValue Imm = CurDAG->getTargetConstant(0, DL, MVT::i32);
-      int FI = cast<FrameIndexSDNode>(Node)->getIndex();
-      SDValue TFI = CurDAG->getTargetFrameIndex(FI, MVT::i32);
-      ReplaceNode(Node,
-                  CurDAG->getMachineNode(RISCVN::ADDI, DL, MVT::i32, TFI,
-                  Imm));
-      IsSelected = true;
-    } break;
+  case ISD::FrameIndex: {
+    SDValue Imm = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    int FI = cast<FrameIndexSDNode>(Node)->getIndex();
+    SDValue TFI = CurDAG->getTargetFrameIndex(FI, MVT::i32);
+    ReplaceNode(Node,
+                CurDAG->getMachineNode(RISCVN::ADDI, DL, MVT::i32, TFI, Imm));
+    IsSelected = true;
+  } break;
   }
 
   if (IsSelected)

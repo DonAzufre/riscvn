@@ -12,6 +12,9 @@ class STypeOpcode<string name, bits<3> funct3>
     : ITypeOpcode<name, 0b0100011, funct3> {
 }
 
+class BTypeOpcode<string name, bits<3> funct3>
+    : ITypeOpcode<name, 0b1100011, funct3>;
+
 class RTypeOpcode<string name, bits<3> funct3, bits<7> funct7>
     : ITypeOpcode<name, 0b0110011, funct3>{
   bits<7> FUNCT7 = funct7;
@@ -50,6 +53,14 @@ def OPC_JAL :JTypeOpcode<"JAL">;
 // U type inst
 def OPC_LUI : UTypeOpcode<"LUI", 0b0110111>;
 def OPC_AUIPC : UTypeOpcode<"AUIPC", 0b0010111>;
+
+// B type inst
+def OPC_BEQ : BTypeOpcode<"BEQ", 0b000>;
+def OPC_BNE : BTypeOpcode<"BNE", 0b001>;
+def OPC_BLT : BTypeOpcode<"BLT", 0b100>;
+def OPC_BGE : BTypeOpcode<"BGE", 0b101>;
+def OPC_BLTU : BTypeOpcode<"BLTU", 0b110>;
+def OPC_BGEU : BTypeOpcode<"BGEU", 0b111>;
 
 class RV32IInst<dag outs, dag ins, string asmstr, list<dag> pattern>
     : Instruction {
@@ -130,12 +141,10 @@ class S<STypeOpcode opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
 
   let Inst{6-0} = Opcode;
   let Inst{11-7} = imm12{4-0};
-//  let Inst{11-7} = 0;
   let Inst{14-12} = funct3;
   let Inst{19-15} = rs1;
   let Inst{24-20} = rs2;
   let Inst{31-25} = imm12{11-5};
-//  let Inst{31-25} = 0;
 }
 
 def jmptarget : Operand<OtherVT> {
@@ -153,4 +162,20 @@ class U<UTypeOpcode opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{6-0} = Opcode;
   let Inst{11-7} = rd;
   let Inst{31-12} = imm20;
+}
+
+class B<BTypeOpcode opcode, string instname, list<dag> pattern = []>
+    :RV32IInst<(outs ), (ins GPR:$rs1, GPR:$rs2, jmptarget:$imm12), instname#" $rs1, $rs2, $imm12", pattern>  {
+  bits<7> Opcode = opcode.Value;
+  bits<3> funct3 = opcode.FUNCT3;
+  bits<5> rs1;
+  bits<5> rs2;
+  bits<12> imm12;
+
+  let Inst{6-0} = Opcode;
+  let Inst{11-7} = imm12{4-0};
+  let Inst{14-12} = funct3;
+  let Inst{19-15} = rs1;
+  let Inst{24-20} = rs2;
+  let Inst{31-25} = imm12{11-5};
 }

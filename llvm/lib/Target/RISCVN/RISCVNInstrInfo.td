@@ -1,26 +1,59 @@
 include "RISCVNInstrFormats.td"
 
 
+class RISCVNOp : Operand<i32> {
+    let OperandNamespace = "RISCVNOp";
+}
+
+class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
+    let Name = prefix # "Imm" # width # suffix;
+    let RenderMethod = "addImmOperands";
+    let DiagnosticType = !strconcat("Invalid", Name);
+}
+
+class SImmAsmOperand<int width, string suffix = "">
+    : ImmAsmOperand<"S", width, suffix> {
+}
+
+class RISCVNSImmOp<int bitsNum> : RISCVNOp {
+    let ParserMatchClass = SImmAsmOperand<bitsNum>;
+    let EncoderMethod = "getImmOpValue";
+    let DecoderMethod = "decodeSImmOperand<" # bitsNum # ">";
+    let OperandType = "OPERAND_SIMM" # bitsNum;
+}
+
+class RISCVNSImmLeafOp<int bitsNum> :
+    RISCVNSImmOp<bitsNum>, ImmLeaf<i32, "return isInt<" # bitsNum # ">(Imm);">;
+
+def simm12 : RISCVNSImmLeafOp<12> {
+      let MCOperandPredicate = [{
+        int64_t Imm;
+        if (MCOp.evaluateAsConstantImm(Imm))
+          return isInt<12>(Imm);
+        return MCOp.isBareSymbolRef();
+      }];
+}
+
 def retglue : SDNode<"RISCVNISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 
 def ADDI : I<OPC_ADDI,
             (outs GPR:$rd),
-            (ins GPR:$rs1, i32imm:$imm12),
+            (ins GPR:$rs1, simm12:$imm12),
             "addi $rd, $rs1, $imm12",
             []>;
 
 let mayStore = false, mayLoad = true in {
     def LW : I<OPC_LW,
                 (outs GPR:$rd),
-                (ins GPR:$rs1, i32imm:$imm12),
+                (ins GPR:$rs1, simm12:$imm12),
                 "lw $rd, ${imm12}(${rs1})",
                 []>;
 }
 
-def : Pat<(i32 (imm:$imm12)), (ADDI X0, imm:$imm12)>;
-def : Pat<(add GPR:$val, imm:$imm12), (ADDI GPR:$val, imm:$imm12)>;
+def : Pat<(i32 (simm12:$imm12)), (ADDI X0, simm12:$imm12)>;
+def : Pat<(add GPR:$val, simm12:$imm12), (ADDI GPR:$val, simm12:$imm12)>;
 
 def : Pat<(load GPR:$addr), (LW GPR:$addr, 0)>;
 def : Pat<(load tframeindex:$addr), (LW GPR:$addr, 0)>;
@@ -103,23 +136,26 @@ def : Pat<(and GPR:$a, GPR:$b), (AND GPR:$a, GPR:$b)>;
 def : Pat<(or GPR:$a, GPR:$b), (OR GPR:$a, GPR:$b)>;
 def : Pat<(xor GPR:$a, GPR:$b), (XOR GPR:$a, GPR:$b)>;
 def : Pat<(setlt GPR:$a, GPR:$b), (SLT GPR:$a, GPR:$b)>;
+def : Pat<(setgt GPR:$a, GPR:$b), (SLT GPR:$b, GPR:$a)>;
 def : Pat<(setult GPR:$a, GPR:$b), (SLTU GPR:$a, GPR:$b)>;
+def : Pat<(setugt GPR:$a, GPR:$b), (SLTU GPR:$b, GPR:$a)>;
+
 
 let isBranch = true in {
     def JAL : J<OPC_JAL,
-                (outs GPR:$rd),
-                (ins jmptarget:$imm20),
+                (outs ),
+                (ins GPR:$rd, jmptarget:$imm20),
                 "jal $rd, $imm20",
                 []>;
 }
 
-def : Pat<(br bb:$addr), (JAL jmptarget:$addr)>;
+def : Pat<(br bb:$addr), (JAL X0, jmptarget:$addr)>;
 
 let mayLoad = false, mayStore = true, imm12 = 0 in {
     def SW : S<OPC_SW,
                 (outs ),
-                (ins GPR:$rs2, i32imm:$imm12, GPR:$rs1),
-                "sw $rs2,  ${imm12}(${rs1})",
+                (ins GPR:$rs2, simm12:$imm12, GPR:$rs1),
+                "sw $rs2, ${imm12}(${rs1})",
                 []>;
 }
 
@@ -139,6 +175,22 @@ def AUIPC : U<OPC_AUIPC,
             (ins i32imm:$imm20),
             "auipc $rd, $imm20",
             []>;
+let isBranch = true in {
+    def BEQ : B<OPC_BEQ, "beq">;
+    def BNE : B<OPC_BNE, "bne">;
+    def BLT : B<OPC_BLT, "blt">;
+    def BGE : B<OPC_BGE, "bge">;
+    def BLTU : B<OPC_BLTU, "bltu">;
+    def BGEU : B<OPC_BGEU, "bgeu">;
+}
+
+//def : Pat<(brcond (i32 (seteq GPR:$rs1, GPR:$rs2)), bb:$addr), (BEQ GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
+//def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$addr), (BLT GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
+//def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$addr), (BLTU GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
+
+def : Pat<(brcc SETNE, GPR:$rs1, GPR:$rs2, bb:$addr), (BNE GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
+def : Pat<(brcc SETEQ, GPR:$rs1, GPR:$rs2, bb:$addr), (BEQ GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
+
 
 def hi : SDNode<"RISCVNISD::HI", SDTIntUnaryOp>;
 def add_lo : SDNode<"RISCVNISD::ADD_LO", SDTIntBinOp>;
@@ -169,4 +221,5 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
 
 
 def : InstAlias<"ret", (JALR X0, X1, 0)>;
-def : InstAlias<"li $rd, $imm",  (ADDI GPR:$rd, X0, i32imm:$imm)>;  
+def : InstAlias<"li $rd, $imm",  (ADDI GPR:$rd, X0, i32imm:$imm)>;
+def : InstAlias<"j $offset", (JAL X0, jmptarget:$offset)>;
