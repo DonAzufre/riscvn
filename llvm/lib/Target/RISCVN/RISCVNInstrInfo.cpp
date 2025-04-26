@@ -1,5 +1,7 @@
 #include "RISCVNInstrInfo.h"
+
 #include "MCTargetDesc/RISCVNMCTargetDesc.h"
+#include "RISCVNSubtarget.h"
 
 using namespace llvm;
 
@@ -19,9 +21,21 @@ void RISCVNInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   // reg class 相关处理
   BuildMI(MBB, MI, DL, get(RISCVN::LW), DestReg)
-      .addFrameIndex(FrameIndex)
+      .addImm(0)
+      .addFrameIndex(FrameIndex);
+}
+
+void RISCVNInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, MCRegister DestReg,
+                                  MCRegister SrcReg, bool KillSrc) const {
+  // todo: 处理寄存器类
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  BuildMI(MBB, MBBI, DL, get(RISCVN::ADDI), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc))
       .addImm(0);
 }
+
 void RISCVNInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
@@ -35,8 +49,8 @@ void RISCVNInstrInfo::storeRegToStackSlot(
   // reg class相关处理
   BuildMI(MBB, MI, DL, get(RISCVN::SW))
       .addReg(SrcReg, KillFlag)
-      .addReg(FrameIndex)
-      .addImm(0);
+      .addImm(0)
+      .addReg(FrameIndex);
 }
 RISCVNInstrInfo::RISCVNInstrInfo(RISCVNSubtarget &STI)
     : RISCVNGenInstrInfo(), STI(STI) {}

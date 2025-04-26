@@ -44,10 +44,22 @@ def ADDI : I<OPC_ADDI,
             "addi $rd, $rs1, $imm12",
             []>;
 
+def SLTI : I<OPC_SLTI,
+            (outs GPR:$rd),
+            (ins GPR:$rs1, simm12:$imm12),
+            "slti $rd, $rs1, $imm12",
+            []>;
+
+def SLTIU : I<OPC_SLTIU,
+            (outs GPR:$rd),
+            (ins GPR:$rs1, simm12:$imm12),
+            "sltiu $rd, $rs1, $imm12",
+            []>;
+
 let mayStore = false, mayLoad = true in {
     def LW : I<OPC_LW,
                 (outs GPR:$rd),
-                (ins GPR:$rs1, simm12:$imm12),
+                (ins simm12:$imm12, GPR:$rs1),
                 "lw $rd, ${imm12}(${rs1})",
                 []>;
 }
@@ -55,10 +67,11 @@ let mayStore = false, mayLoad = true in {
 def : Pat<(i32 (simm12:$imm12)), (ADDI X0, simm12:$imm12)>;
 def : Pat<(add GPR:$val, simm12:$imm12), (ADDI GPR:$val, simm12:$imm12)>;
 
-def : Pat<(load GPR:$addr), (LW GPR:$addr, 0)>;
-def : Pat<(load tframeindex:$addr), (LW GPR:$addr, 0)>;
+def : Pat<(load GPR:$addr), (LW 0, GPR:$addr)>;
+def : Pat<(load tframeindex:$addr), (LW 0, GPR:$addr)>;
 
-let isCall = 1 in {
+let isReturn = 1, isTerminator = true in {
+//let isCall = 1 in {
   def JALR : I<OPC_JALR,
               (outs GPR:$rd),
               (ins GPR:$rs1, i32imm:$imm12),
@@ -140,8 +153,11 @@ def : Pat<(setgt GPR:$a, GPR:$b), (SLT GPR:$b, GPR:$a)>;
 def : Pat<(setult GPR:$a, GPR:$b), (SLTU GPR:$a, GPR:$b)>;
 def : Pat<(setugt GPR:$a, GPR:$b), (SLTU GPR:$b, GPR:$a)>;
 
+def : Pat<(seteq GPR:$a, GPR:$b), (SLTIU (XOR GPR:$a, GPR:$b), 1)>;
+def : Pat<(setne GPR:$a, GPR:$b), (SLTU X0, (XOR GPR:$a, GPR:$b))>;
 
-let isBranch = true in {
+
+let isBranch = true, isTerminator = true, isBarrier = true in {
     def JAL : J<OPC_JAL,
                 (outs ),
                 (ins GPR:$rd, jmptarget:$imm20),
@@ -160,8 +176,8 @@ let mayLoad = false, mayStore = true, imm12 = 0 in {
 }
 
 def : Pat<(store i32:$val, GPR:$base), (SW i32:$val, 0, GPR:$base)>;
-def : Pat<(store i32:$val, frameindex:$base), (SW i32:$val, 0, GPR:$base)>;
-def : Pat<(store i32:$val, tframeindex:$base), (SW i32:$val, 0, GPR:$base)>;
+//def : Pat<(store i32:$val, frameindex:$base), (SW i32:$val, 0, GPR:$base)>;
+//def : Pat<(store i32:$val, tframeindex:$base), (SW i32:$val, 0, GPR:$base)>;
 
 
 def LUI : U<OPC_LUI,
@@ -175,7 +191,7 @@ def AUIPC : U<OPC_AUIPC,
             (ins i32imm:$imm20),
             "auipc $rd, $imm20",
             []>;
-let isBranch = true in {
+let isBranch = true, isTerminator = true in {
     def BEQ : B<OPC_BEQ, "beq">;
     def BNE : B<OPC_BNE, "bne">;
     def BLT : B<OPC_BLT, "blt">;
@@ -184,12 +200,14 @@ let isBranch = true in {
     def BGEU : B<OPC_BGEU, "bgeu">;
 }
 
-//def : Pat<(brcond (i32 (seteq GPR:$rs1, GPR:$rs2)), bb:$addr), (BEQ GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
-//def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$addr), (BLT GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
-//def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$addr), (BLTU GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
+def : Pat<(brcond (i32 (seteq GPR:$rs1, GPR:$rs2)), bb:$addr), (BEQ GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$addr), (BLT GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
+def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$addr), (BLTU GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
+def : Pat<(brcond GPR:$cond, bb:$addr), (BNE GPR:$cond, X0, jmptarget:$addr)>;
 
 def : Pat<(brcc SETNE, GPR:$rs1, GPR:$rs2, bb:$addr), (BNE GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
 def : Pat<(brcc SETEQ, GPR:$rs1, GPR:$rs2, bb:$addr), (BEQ GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
+def : Pat<(brcc SETGT, GPR:$rs1, GPR:$rs2, bb:$addr), (BLT GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
 
 
 def hi : SDNode<"RISCVNISD::HI", SDTIntUnaryOp>;
@@ -201,6 +219,12 @@ def : Pat<(add_lo GPR:$hi, tglobaladdr:$lo), (ADDI GPR:$hi, tglobaladdr:$lo)>;
 //def FrameAddrRegImm : ComplexPattern<iPTR, 2, "SelectFrameAddrRegImm",
 //    [frameindex, or, add]>;
 //def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), i32imm:$imm12), (ADDI GPR:$rs1, imm:$imm12)>;
+
+let usesCustomInserter = 1 in
+def riscvn_select : PseudoInst<(outs GPR:$dst),
+  (ins GPR:$cond, GPR:$true, GPR:$false),
+  [(set GPR:$dst, (selectcc GPR:$cond, 0, GPR:$true, GPR:$false, SETEQ))]>;
+
 
 
 let isAsmParserOnly = 1 in

@@ -20,6 +20,9 @@ class RISCVNTargetLowering : public TargetLowering {
 public:
   explicit RISCVNTargetLowering(const TargetMachine &TM,
                                 const RISCVNSubtarget &STI);
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *MBB) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
 
@@ -37,6 +40,8 @@ private:
 
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
+
+  static MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB);
 
 public:
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;

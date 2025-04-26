@@ -22,9 +22,18 @@ RISCVNTargetLowering::RISCVNTargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
-  setOperationAction(ISD::SELECT, MVT::i32, Custom);
+  // setOperationAction(ISD::SELECT, MVT::i32, Custom);
 
-  setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
+  // setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
+}
+MachineBasicBlock *RISCVNTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  default:
+    report_fatal_error("riscvn: emit with custon inserter not implemented.");
+  case RISCVN::riscvn_select:
+    return emitSelect(MI, MBB);
+  }
 }
 
 SDValue RISCVNTargetLowering::LowerFormalArguments(
@@ -159,6 +168,66 @@ SDValue RISCVNTargetLowering::LowerSelect(SDValue Op, SelectionDAG &DAG) const {
 
   return DAG.getNode(ISD::OR, DL, MVT::i32, TruePart, FalsePart);
 }
+MachineBasicBlock *RISCVNTargetLowering::emitSelect(MachineInstr &MI,
+                                                    MachineBasicBlock *BB) {
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  assert(MI.getNumOperands() == 4);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Cond = MI.getOperand(1).getReg();
+  Register TVal = MI.getOperand(2).getReg();
+  Register FVal = MI.getOperand(3).getReg();
+
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineFunction::iterator It = ++BB->getIterator();
+
+  MachineBasicBlock *thisMBB = BB;
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *copyMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *sinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  F->insert(It, copyMBB);
+  F->insert(It, sinkMBB);
+
+  sinkMBB->splice(sinkMBB->begin(), thisMBB,
+                  std::next(MachineBasicBlock::iterator(MI)), thisMBB->end());
+  sinkMBB->transferSuccessorsAndUpdatePHIs(thisMBB);
+
+  // in thisMbb:
+  thisMBB->addSuccessor(copyMBB);
+  thisMBB->addSuccessor(sinkMBB);
+
+  // bne cond, 0, copyMBB
+  BuildMI(thisMBB, DL, TII.get(RISCVN::BNE))
+      .addReg(Cond)
+      .addReg(RISCVN::X0)
+      .addMBB(copyMBB);
+  // // addi res, falseValue, 0
+  // BuildMI(thisMBB, DL, TII.get(RISCVN::ADDI), Dst).addReg(FVal).addImm(0);
+  // // j sinkMBB
+  // BuildMI(thisMBB, DL,
+  // TII.get(RISCVN::JAL)).addReg(RISCVN::X0).addMBB(sinkMBB);
+
+  // in copyMBB:
+  copyMBB->addSuccessor(sinkMBB);
+  // // addi res, trueValue, 0
+  // BuildMI(copyMBB, DL, TII.get(RISCVN::ADDI), Dst).addReg(TVal).addImm(0);
+  // // j sinkMbb
+  // BuildMI(copyMBB, DL, TII.get(RISCVN::)).addReg(RISCVN::X0).addMBB(sinkMBB);
+
+  BuildMI(*sinkMBB, sinkMBB->begin(), DL, TII.get(RISCVN::PHI), Dst)
+      .addReg(TVal)
+      .addMBB(copyMBB)
+      .addReg(FVal)
+      .addMBB(thisMBB);
+
+  MI.eraseFromParent();
+
+  F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+
+  return sinkMBB;
+}
 
 SDValue RISCVNTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -167,8 +236,8 @@ SDValue RISCVNTargetLowering::LowerOperation(SDValue Op,
     report_fatal_error("riscvn: unimplemented operand");
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
-  case ISD::SELECT:
-    return LowerSelect(Op, DAG);
+    // case ISD::SELECT:
+    //   return LowerSelect(Op, DAG);
   }
   return TargetLowering::LowerOperation(Op, DAG);
 }

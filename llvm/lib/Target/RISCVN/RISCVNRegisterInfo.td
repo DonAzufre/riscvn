@@ -44,5 +44,10 @@ let RegAltNameIndices = [ABIRegAltName] in {
 }
 
 def GPR : RegisterClass<"RISCVN", [i32], 32, (add 
-    (sequence "X%u", 0, 31)
-)>;
+    (sequence "X%u", 10, 17),
+    (sequence "X%u", 5, 7),
+    (sequence "X%u", 28, 31),
+    (sequence "X%u", 8, 9),
+    (sequence "X%u", 18, 27),
+    (sequence "X%u", 0, 4))
+>;

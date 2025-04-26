@@ -25,6 +25,7 @@ BitVector RISCVNRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(RISCVN::X2); // sp
   Reserved.set(RISCVN::X3); // gp
   Reserved.set(RISCVN::X4); // tp
+  Reserved.set(RISCVN::X8); // fp
   return Reserved;
 }
 
@@ -42,17 +43,38 @@ bool RISCVNRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int Offset = MFI.getObjectOffset(FrameIndex);
   int StackSize = MFI.getStackSize();
 
-  // 添加用于保存ra和fp的大小
-  StackSize += 8;
-  assert(Instr.getOperand(FIOperandNum + 1).getImm() == 0 &&
-         "riscvn: frameindex not in format addi sp, 0");
+  // todo: 统一处理方式
 
-  Offset += StackSize + 4;
+  Register SPReg = RISCVN::X2;
+  switch (Instr.getOpcode()) {
+  default:
+    report_fatal_error("riscvn: unknown instr for eliminate frame index");
+  case RISCVN::ADDI:
+    Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
+    Instr.getOperand(FIOperandNum + 1).setImm(Offset + StackSize);
+    break;
+  case RISCVN::SW:
+    Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
+    Instr.getOperand(FIOperandNum - 1).setImm(Offset + StackSize);
+    break;
+  case RISCVN::LW:
+    Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
+    Instr.getOperand(FIOperandNum - 1).setImm(Offset + StackSize);
+    break;
+  }
 
-  auto FPReg = getFrameRegister(MF);
+  // // 添加用于保存ra和fp的大小
+  // StackSize += 8;
+  // assert(Instr.getOperand(FIOperandNum + 1).getImm() == 0 &&
+  //        "riscvn: frameindex not in format addi sp, 0");
 
-  Instr.getOperand(FIOperandNum).ChangeToRegister(FPReg, false);
-  Instr.getOperand(FIOperandNum + 1).setImm(-Offset);
+  // Offset += StackSize + 4;
+  //
+  // auto FPReg = getFrameRegister(MF);
+  //
+  // Instr.getOperand(FIOperandNum).ChangeToRegister(FPReg, false);
+  // Instr.getOperand(FIOperandNum + 1).setImm(-Offset);
+
   return false;
 }
 

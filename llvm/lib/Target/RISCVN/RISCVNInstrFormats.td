@@ -29,6 +29,8 @@ class UTypeOpcode<string name, bits<7> opcode>
 
 // I type inst
 def OPC_ADDI : ITypeOpcode<"ADDI", 0b0010011, 0b000>;
+def OPC_SLTI : ITypeOpcode<"SLTI", 0b0010011, 0b010>;
+def OPC_SLTIU : ITypeOpcode<"SLTIU", 0b0010011, 0b011>;
 def OPC_JALR : ITypeOpcode<"JALR", 0b1100111, 0b000>;
 def OPC_LW : ITypeOpcode<"LW", 0b0000011, 0b010>;
 
