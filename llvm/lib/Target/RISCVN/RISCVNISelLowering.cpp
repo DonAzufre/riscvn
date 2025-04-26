@@ -138,12 +138,18 @@ SDValue RISCVNTargetLowering::LowerGlobalAddress(SDValue Op,
   auto Ty = Op.getValueType();
   auto N = cast<GlobalAddressSDNode>(Op);
   const auto GV = N->getGlobal();
+  auto Offset = N->getOffset();
 
   auto AddrHi = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, RISCVNII::MO_HI);
   auto AddrLo = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, RISCVNII::MO_LO);
   auto MNHi = DAG.getNode(RISCVNISD::HI, DL, Ty, AddrHi);
+  auto MNLo = DAG.getNode(RISCVNISD::ADD_LO, DL, Ty, MNHi, AddrLo);
 
-  return DAG.getNode(RISCVNISD::ADD_LO, DL, Ty, MNHi, AddrLo);
+  if (Offset == 0)
+    return MNLo;
+  else
+    return DAG.getNode(ISD::ADD, DL, Ty, MNLo,
+                       DAG.getConstant(Offset, DL, MVT::i32));
 }
 SDValue RISCVNTargetLowering::LowerSelect(SDValue Op, SelectionDAG &DAG) const {
 
