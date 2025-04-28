@@ -130,6 +130,146 @@ RISCVNTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(RISCVNISD::RET_GLUE, DL, MVT::Other, RetOps);
 }
 
+SDValue RISCVNTargetLowering::LowerCallResult(
+    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
+                 *DAG.getContext());
+  CCInfo.AnalyzeCallResult(Ins, RetCC_RISCVN);
+
+  // Copy all of the result registers out of their specified physreg.
+  for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
+    CCValAssign &VA = RVLocs[i];
+    EVT CopyVT = VA.getLocVT();
+
+    /// ??? is this correct?
+    Chain = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), CopyVT, InGlue)
+                .getValue(1);
+    SDValue Val = Chain.getValue(0);
+
+    if (VA.isExtInLoc() && VA.getValVT().getScalarType() == MVT::i1)
+      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
+
+    InGlue = Chain.getValue(2);
+    InVals.push_back(Val);
+  }
+
+  return Chain;
+}
+
+SDValue
+RISCVNTargetLowering::LowerCall(CallLoweringInfo &CLI,
+                                SmallVectorImpl<SDValue> &InVals) const {
+
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc &DL = CLI.DL;
+  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  SDValue Chain = CLI.Chain;
+  SDValue Callee = CLI.Callee;
+  bool &IsTailCall = CLI.IsTailCall;
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsVarArg = CLI.IsVarArg; // Varargs calls
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
+                 *DAG.getContext());
+
+  CCInfo.AnalyzeCallOperands(Outs, CC_RISCVN);
+
+  assert(!IsTailCall);
+  assert(!IsVarArg);
+
+  unsigned NumBytes = CCInfo.getStackSize();
+
+  // todo: Create local copies for byval args
+
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
+
+  SmallVector<std::pair<Register, SDValue>> RegsToPass;
+  SmallVector<SDValue> MemOpChains;
+  SDValue StackPtr;
+
+  const RISCVNRegisterInfo *RegInfo = Subtarget->getRegisterInfo();
+  for (unsigned i = 0, e = ArgLocs.size(); i < e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    EVT RegVT = VA.getLocVT();
+    SDValue ArgValue = OutVals[i];
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    assert(!Flags.isInAlloca() && !Flags.isByVal());
+
+    switch (VA.getLocInfo()) {
+    default:
+      llvm_unreachable("Unknown loc info!");
+    case CCValAssign::Full:
+      break;
+    }
+
+    if (VA.isRegLoc())
+      RegsToPass.emplace_back(VA.getLocReg(), ArgValue);
+    else
+      report_fatal_error("args of memloc not implemented");
+  }
+
+  if (!MemOpChains.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
+
+  SDValue InGlue;
+  for (unsigned i = 0, e = RegsToPass.size(); i < e; ++i) {
+    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[i].first,
+                             RegsToPass[i].second, InGlue);
+    InGlue = Chain.getValue(1);
+  }
+
+  assert(Callee.getOpcode() == ISD::GlobalAddress);
+
+  auto *G = cast<GlobalAddressSDNode>(Callee);
+  const GlobalValue *GV = G->getGlobal();
+  if (!GV->hasDLLImportStorageClass()) {
+    unsigned char OpFlags = Subtarget->classifyGlobalFunctionReference(GV);
+
+    Callee = DAG.getTargetGlobalAddress(
+        GV, DL, getPointerTy(DAG.getDataLayout()), G->getOffset(), OpFlags);
+  }
+
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  SmallVector<SDValue, 8> Ops;
+
+  Ops.push_back(Chain);
+  Ops.push_back(Callee);
+  for (unsigned i = 0, e = RegsToPass.size(); i < e; ++i) {
+    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
+                                  RegsToPass[i].second.getValueType()));
+  }
+
+  const uint32_t *Mask = RegInfo->getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+
+  Ops.push_back(DAG.getRegisterMask(Mask));
+  if (InGlue.getNode())
+    Ops.push_back(InGlue);
+
+  Chain = DAG.getNode(RISCVNISD::CALL, DL, NodeTys, Ops);
+  InGlue = Chain.getValue(1);
+
+  // callee pop
+
+  // size2: callee pop bytes
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, DL);
+  InGlue = Chain.getValue(1);
+
+  return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG,
+                         InVals);
+
+  report_fatal_error("riscvn: LowerCall not implemented");
+}
+
 SDValue RISCVNTargetLowering::LowerGlobalAddress(SDValue Op,
                                                  SelectionDAG &DAG) const {
   assert(!isPositionIndependent());
@@ -256,6 +396,8 @@ const char *RISCVNTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "RISCVNISD::HI";
   case RISCVNISD::ADD_LO:
     return "RISCVNISD::ADD_LO";
+  case RISCVNISD::CALL:
+    return "RISCVNISD::CALL";
   default:
     llvm_unreachable("riscvn: unreachable node name");
   }

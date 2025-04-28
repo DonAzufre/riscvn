@@ -53,4 +53,6 @@ void RISCVNInstrInfo::storeRegToStackSlot(
       .addReg(FrameIndex);
 }
 RISCVNInstrInfo::RISCVNInstrInfo(RISCVNSubtarget &STI)
-    : RISCVNGenInstrInfo(), STI(STI) {}
+    : RISCVNGenInstrInfo(RISCVN::ADJCALLSTACKDOWN, RISCVN::ADJCALLSTACKUP, 0,
+                         RISCVN::PseudoRET),
+      STI(STI) {}

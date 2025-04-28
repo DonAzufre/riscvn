@@ -11,6 +11,33 @@
 
 using namespace llvm;
 
+MachineBasicBlock::iterator RISCVNFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MI) const {
+  Register SPReg = RISCVN::X2;
+  DebugLoc DL = MI->getDebugLoc();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  // hasReservedCallFrame always true here
+
+  int64_t Amount = MI->getOperand(0).getImm();
+
+  assert(isInt<12>(Amount));
+  if (Amount != 0) {
+    // align sp here
+    if (MI->getOpcode() == RISCVN::ADJCALLSTACKDOWN)
+      Amount = -Amount;
+
+    const RISCVNRegisterInfo &RI = *STI.getRegisterInfo();
+    BuildMI(MBB, MI, DL, TII.get(RISCVN::ADDI), SPReg)
+        .addReg(SPReg)
+        .addImm(Amount)
+        .setMIFlag(MachineInstr::NoFlags);
+  }
+
+  return MBB.erase(MI);
+}
+
 void RISCVNFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   const auto &RISCVNRI = *MF.getSubtarget<RISCVNSubtarget>().getRegisterInfo();
@@ -87,9 +114,7 @@ bool RISCVNFrameLowering::restoreCalleeSavedRegisters(
     Register Reg = Info.getReg();
     int FI = Info.getFrameIdx();
 
-    BuildMI(MBB, MI, DL, TII.get(RISCVN::LW), Reg)
-        .addImm(0)
-        .addFrameIndex(FI);
+    BuildMI(MBB, MI, DL, TII.get(RISCVN::LW), Reg).addImm(0).addFrameIndex(FI);
   }
   return true;
 }

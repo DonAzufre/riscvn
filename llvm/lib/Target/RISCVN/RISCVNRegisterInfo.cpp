@@ -28,6 +28,11 @@ BitVector RISCVNRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(RISCVN::X8); // fp
   return Reserved;
 }
+const uint32_t *
+RISCVNRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                         CallingConv::ID id) const {
+  return CSR_RISCVN_CALLSAVE_RegMask;
+}
 
 bool RISCVNRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                              int SPAdj, unsigned FIOperandNum,

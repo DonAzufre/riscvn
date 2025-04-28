@@ -1,10 +1,10 @@
 #include "RISCVNAsmPrinter.h"
+#include "MCTargetDesc/RISCVNBaseInfo.h"
+#include "MCTargetDesc/RISCVNMCExpr.h"
 #include "MCTargetDesc/RISCVNMCTargetDesc.h"
 #include "TargetInfo/RISCVNTargetInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "MCTargetDesc/RISCVNBaseInfo.h"
-#include "MCTargetDesc/RISCVNMCExpr.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -38,7 +38,7 @@ void RISCVNAsmPrinter::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     MCOperand MCOp;
     switch (MO.getType()) {
     default:
-       llvm_unreachable("unknown operand type");
+      llvm_unreachable("unknown operand type");
     case MachineOperand::MO_Register:
       if (MO.isImplicit())
         continue;
@@ -52,19 +52,23 @@ void RISCVNAsmPrinter::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       break;
     case MachineOperand::MO_FrameIndex:
       // MI->dump();
-      // report_fatal_error("riscvn: unimplemented asm printer lower frameindex");
+      // report_fatal_error("riscvn: unimplemented asm printer lower
+      // frameindex");
       MCOp = MCOperand::createReg(RISCVN::X2);
       break;
     case MachineOperand::MO_MachineBasicBlock:
       MCOp = LowerSymbolOperand(MO, MO.getMBB()->getSymbol());
       break;
+
+    case MachineOperand::MO_RegisterMask:
+      continue;
     }
 
     OutMI.addOperand(MCOp);
   }
 }
 MCOperand RISCVNAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
-                                                MCSymbol *Sym) const {
+                                               MCSymbol *Sym) const {
   RISCVNMCExpr::VariantKind Kind;
 
   switch (MO.getTargetFlags()) {

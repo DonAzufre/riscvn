@@ -11,6 +11,7 @@ enum NodeType : unsigned {
   RET_GLUE,
   HI,
   ADD_LO,
+  CALL,
 };
 }
 
@@ -38,6 +39,17 @@ private:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
+                        CallingConv::ID CallConv, bool IsVarArg,
+                        const SmallVectorImpl<ISD::InputArg> &Ins,
+                        const SDLoc &DL, SelectionDAG &DAG,
+                        SmallVectorImpl<SDValue> &InVals) const;
+
+public:
+  SDValue LowerCall(CallLoweringInfo &,
+                    SmallVectorImpl<SDValue> &) const override;
+
+private:
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
 

@@ -15,3 +15,6 @@ def CC_RISCVN : CallingConv<[
 
 
 def CSR_RISCVN : CalleeSavedRegs<(add X2, X8, X9, (sequence "X%d", 18, 27))>;
+
+// todo: f regs
+def CSR_RISCVN_CALLSAVE : CalleeSavedRegs<(add X1, X8, X9, (sequence "X%u", 18, 27))>;

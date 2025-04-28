@@ -155,6 +155,13 @@ def jmptarget : Operand<OtherVT> {
   let PrintMethod = "printJmpTargetOperand";
 }
 
+def call_symbol : Operand<i32> {
+  // todo: just to shut tablegen up
+  let EncoderMethod = "getPCRelBranchTargetOpValue";
+  let OperandType = "OPERAND_PCREL";
+  let PrintMethod = "printCallSymbolOperand";
+}
+
 class U<UTypeOpcode opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
     :RV32IInst<outs, ins, asmstr, pattern> {
   bits<7> Opcode = opcode.Value;

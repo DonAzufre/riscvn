@@ -14,6 +14,9 @@ public:
       : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0,
                             Align(4)),
         STI(STI) {}
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const override;
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,

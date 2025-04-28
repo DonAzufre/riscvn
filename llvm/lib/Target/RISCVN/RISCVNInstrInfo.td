@@ -37,6 +37,32 @@ def simm12 : RISCVNSImmLeafOp<12> {
 def retglue : SDNode<"RISCVNISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+def callseq_start : SDNode<"ISD::CALLSEQ_START",
+                        SDCallSeqStart<[
+                            SDTCisVT<0, i32>,
+                            SDTCisVT<1, i32>
+                        ]>,
+                        [SDNPHasChain, SDNPOutGlue]>;
+
+def callseq_end : SDNode<"ISD::CALLSEQ_END",
+                        SDCallSeqEnd<[
+                            SDTCisVT<0, i32>,
+                            SDTCisVT<1, i32>
+                        ]>,
+                        [SDNPHasChain, SDNPOptInGlue ,SDNPOutGlue]>;
+
+let Defs = [X2], Uses = [X2] in {
+def ADJCALLSTACKDOWN : PseudoInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : PseudoInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+def riscvn_call : SDNode<"RISCVNISD::CALL",
+                            SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic
+                            ]>;
+
 
 def ADDI : I<OPC_ADDI,
             (outs GPR:$rd),
@@ -208,6 +234,7 @@ def : Pat<(brcond GPR:$cond, bb:$addr), (BNE GPR:$cond, X0, jmptarget:$addr)>;
 def : Pat<(brcc SETNE, GPR:$rs1, GPR:$rs2, bb:$addr), (BNE GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
 def : Pat<(brcc SETEQ, GPR:$rs1, GPR:$rs2, bb:$addr), (BEQ GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
 def : Pat<(brcc SETGT, GPR:$rs1, GPR:$rs2, bb:$addr), (BLT GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
+def : Pat<(brcc SETLT, GPR:$rs1, GPR:$rs2, bb:$addr), (BLT GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
 
 
 def hi : SDNode<"RISCVNISD::HI", SDTIntUnaryOp>;
@@ -242,6 +269,14 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
               PseudoInstExpansion<(JALR X0, X1, 0)>;
 }
 
+let isCall = 1, Defs = [X1], Size = 8 in
+def PseudoCALL : PseudoInst<
+            (outs ),
+            (ins call_symbol:$func),
+            [],
+            "call $func">;
+
+def : Pat<(riscvn_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 
 
 def : InstAlias<"ret", (JALR X0, X1, 0)>;
