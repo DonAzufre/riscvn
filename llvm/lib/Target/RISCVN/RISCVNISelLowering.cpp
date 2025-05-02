@@ -3,6 +3,7 @@
 #include "MCTargetDesc/RISCVNMCTargetDesc.h"
 #include "RISCVNSubtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 
@@ -42,6 +43,7 @@ SDValue RISCVNTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   SmallVector<CCValAssign, 8> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
@@ -85,8 +87,29 @@ SDValue RISCVNTargetLowering::LowerFormalArguments(
       InVals.push_back(ArgValue);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      llvm_unreachable("RISCVN - LowerFormalArguments - "
-                       "Memory argument not implemented");
+      report_fatal_error("RISCVN - LowerFormalArguments - "
+                         "Memory argument not implemented");
+      assert(LocVT.getSizeInBits() / 8 == 4);
+      int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
+                                     VA.getLocMemOffset(), true);
+      SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+
+      ISD::LoadExtType ExtType;
+      switch (VA.getLocInfo()) {
+      default:
+        llvm_unreachable("Unexpected CCValAssign::LocInfo");
+      case CCValAssign::Full:
+      case CCValAssign::Indirect:
+      case CCValAssign::BCvt:
+        ExtType = ISD::NON_EXTLOAD;
+        break;
+      }
+      ArgValue = DAG.getExtLoad(
+          ExtType, DL, LocVT, Chain, FIN,
+          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI),
+          VA.getValVT());
+
+      InVals.push_back(ArgValue);
     }
   }
 
@@ -176,6 +199,7 @@ RISCVNTargetLowering::LowerCall(CallLoweringInfo &CLI,
   CallingConv::ID CallConv = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg; // Varargs calls
   MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
@@ -213,8 +237,18 @@ RISCVNTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     if (VA.isRegLoc())
       RegsToPass.emplace_back(VA.getLocReg(), ArgValue);
-    else
+    else {
+      assert(VA.isMemLoc() && "Argument not register or memory");
       report_fatal_error("args of memloc not implemented");
+      if (!StackPtr.getNode())
+        StackPtr = DAG.getCopyFromReg(Chain, DL, RISCVN::X2, PtrVT);
+      SDValue Address =
+          DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
+                      DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
+
+      MemOpChains.push_back(
+          DAG.getStore(Chain, DL, ArgValue, Address, MachinePointerInfo()));
+    }
   }
 
   if (!MemOpChains.empty())

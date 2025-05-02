@@ -11,6 +11,9 @@ using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVNTarget() {
   RegisterTargetMachine<RISCVNTargetMachine> X(getTheRISCVNTarget());
+
+  PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  initializeRISCVNExpandPseudoPass(Registry);
 }
 
 static StringRef computeDataLayout(const Triple &TT) {
@@ -55,5 +58,6 @@ TargetPassConfig *RISCVNTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 bool RISCVNPassConfig::addInstSelector() {
   addPass(createRISCVNISelDag(getRISCVNTargetMachine(), getOptLevel()));
+  addPass(createRISCVNExpandPseudoPass());
   return false;
 }

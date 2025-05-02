@@ -1,5 +1,7 @@
 #include "RISCVNRegisterInfo.h"
+
 #include "MCTargetDesc/RISCVNMCTargetDesc.h"
+#include "RISCVN.h"
 #include "RISCVNSubtarget.h"
 
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -51,22 +53,62 @@ bool RISCVNRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // todo: 统一处理方式
 
   Register SPReg = RISCVN::X2;
+  Register TPReg = RISCVN::X4;
+
+  if (!isSimm12(Offset + StackSize))
+    BuildMI(*II->getParent(), II, II->getDebugLoc(),
+            MF.getSubtarget().getInstrInfo()->get(RISCVN::PseudoLI), TPReg)
+        .addImm(Offset + StackSize);
   switch (Instr.getOpcode()) {
   default:
     report_fatal_error("riscvn: unknown instr for eliminate frame index");
   case RISCVN::ADDI:
-    Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
-    Instr.getOperand(FIOperandNum + 1).setImm(Offset + StackSize);
+    if (isSimm12(Offset + StackSize)) {
+      Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
+      Instr.getOperand(FIOperandNum + 1).setImm(Offset + StackSize);
+    } else {
+      BuildMI(*II->getParent(), II, II->getDebugLoc(),
+              MF.getSubtarget().getInstrInfo()->get(RISCVN::ADD),
+              Instr.getOperand(0).getReg())
+          .addReg(SPReg)
+          .addReg(TPReg);
+    }
     break;
   case RISCVN::SW:
-    Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
-    Instr.getOperand(FIOperandNum - 1).setImm(Offset + StackSize);
+    if (isSimm12(Offset + StackSize)) {
+      Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
+      Instr.getOperand(FIOperandNum - 1).setImm(Offset + StackSize);
+    } else {
+      BuildMI(*II->getParent(), II, II->getDebugLoc(),
+              MF.getSubtarget().getInstrInfo()->get(RISCVN::ADD), TPReg)
+          .addReg(SPReg)
+          .addReg(TPReg);
+      BuildMI(*II->getParent(), II, II->getDebugLoc(),
+              MF.getSubtarget().getInstrInfo()->get(RISCVN::SW))
+          .addReg(Instr.getOperand(0).getReg())
+          .addImm(0)
+          .addReg(TPReg);
+    }
     break;
   case RISCVN::LW:
-    Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
-    Instr.getOperand(FIOperandNum - 1).setImm(Offset + StackSize);
+    if (isSimm12(Offset + StackSize)) {
+      Instr.getOperand(FIOperandNum).ChangeToRegister(SPReg, false);
+      Instr.getOperand(FIOperandNum - 1).setImm(Offset + StackSize);
+    } else {
+      BuildMI(*II->getParent(), II, II->getDebugLoc(),
+              MF.getSubtarget().getInstrInfo()->get(RISCVN::ADD), TPReg)
+          .addReg(SPReg)
+          .addReg(TPReg);
+      BuildMI(*II->getParent(), II, II->getDebugLoc(),
+              MF.getSubtarget().getInstrInfo()->get(RISCVN::LW), Instr.getOperand(0).getReg())
+          .addImm(0)
+          .addReg(TPReg);
+    }
     break;
   }
+
+  if (!isSimm12(Offset + StackSize))
+    II->eraseFromParent();
 
   // // 添加用于保存ra和fp的大小
   // StackSize += 8;

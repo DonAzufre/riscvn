@@ -50,7 +50,7 @@ bool RISCVNDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
 
   if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal)) {
+    if (isSimm12(CVal)) {
       Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i32);
       Offset = CurDAG->getTargetConstant(CVal, SDLoc(Addr), MVT::i32);
       return true;

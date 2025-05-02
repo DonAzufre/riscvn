@@ -1,5 +1,6 @@
 #include "RISCVNFrameLowering.h"
 
+#include "RISCVN.h"
 #include "RISCVNSubtarget.h"
 
 #include "MCTargetDesc/RISCVNMCTargetDesc.h"
@@ -22,13 +23,14 @@ MachineBasicBlock::iterator RISCVNFrameLowering::eliminateCallFramePseudoInstr(
 
   int64_t Amount = MI->getOperand(0).getImm();
 
-  assert(isInt<12>(Amount));
+  assert(isSimm12(Amount));
   if (Amount != 0) {
     // align sp here
     if (MI->getOpcode() == RISCVN::ADJCALLSTACKDOWN)
       Amount = -Amount;
 
     const RISCVNRegisterInfo &RI = *STI.getRegisterInfo();
+    assert(isSimm12(Amount));
     BuildMI(MBB, MI, DL, TII.get(RISCVN::ADDI), SPReg)
         .addReg(SPReg)
         .addImm(Amount)
@@ -68,24 +70,69 @@ void RISCVNFrameLowering::emitPrologue(MachineFunction &MF,
   StackSize += 8; // for ra and fp
 
   // 分配栈空间
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADDI), SPReg)
-      .addReg(SPReg)
-      .addImm(-StackSize)
-      .setMIFlag(MachineInstr::FrameSetup);
+  if (isSimm12(-StackSize)) {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADDI), SPReg)
+        .addReg(SPReg)
+        .addImm(-StackSize)
+        .setMIFlag(MachineInstr::FrameSetup);
+  } else {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::PseudoLI),
+            RISCVN::X4)
+        .addImm(-StackSize);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADD), SPReg)
+        .addReg(SPReg)
+        .addReg(RISCVN::X4)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
   // 保存ra
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::SW))
-      .addReg(RAReg)
-      .addImm(StackSize - 4)
-      .addReg(SPReg);
+  if (isSimm12(StackSize - 4)) {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::SW))
+        .addReg(RAReg)
+        .addImm(StackSize - 4)
+        .addReg(SPReg);
+  } else {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::PseudoLI),
+            RISCVN::X4)
+        .addImm(StackSize - 4);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADD), RISCVN::X4)
+        .addReg(SPReg)
+        .addReg(RISCVN::X4);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::SW))
+        .addReg(RAReg)
+        .addImm(0)
+        .addReg(RISCVN::X4);
+  }
   // 保存fp
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::SW))
-      .addReg(FPReg)
-      .addImm(StackSize - 8)
-      .addReg(SPReg);
+  if (isSimm12(StackSize - 8)) {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::SW))
+        .addReg(FPReg)
+        .addImm(StackSize - 8)
+        .addReg(SPReg);
+  } else {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::PseudoLI),
+            RISCVN::X4)
+        .addImm(StackSize - 8);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADD), RISCVN::X4)
+        .addReg(SPReg)
+        .addReg(RISCVN::X4);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::SW))
+        .addReg(FPReg)
+        .addImm(0)
+        .addReg(RISCVN::X4);
+  }
   // 构建新fp
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADDI), FPReg)
-      .addReg(SPReg)
-      .addImm(StackSize);
+  if (isSimm12(StackSize)) {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADDI), FPReg)
+        .addReg(SPReg)
+        .addImm(StackSize);
+  } else {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::PseudoLI),
+            RISCVN::X4)
+        .addImm(StackSize);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADD), FPReg)
+        .addReg(SPReg)
+        .addReg(RISCVN::X4);
+  }
 }
 
 StackOffset
@@ -169,15 +216,50 @@ void RISCVNFrameLowering::emitEpilogue(MachineFunction &MF,
 
   StackSize += 8; // for ra and fp
 
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::LW), RAReg)
-      .addImm(StackSize - 4)
-      .addReg(SPReg);
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::LW), FPReg)
-      .addImm(StackSize - 8)
-      .addReg(SPReg);
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADDI), SPReg)
-      .addReg(SPReg)
-      .addImm(StackSize);
+  if (isSimm12(StackSize - 4)) {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::LW), RAReg)
+        .addImm(StackSize - 4)
+        .addReg(SPReg);
+  } else {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::PseudoLI),
+            RISCVN::X4)
+        .addImm(StackSize - 4);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADD), RISCVN::X4)
+        .addReg(SPReg)
+        .addReg(RISCVN::X4);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::LW), RAReg)
+        .addImm(0)
+        .addReg(RISCVN::X4);
+  }
+  if (isSimm12(StackSize - 8)) {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::LW), FPReg)
+        .addImm(StackSize - 8)
+        .addReg(SPReg);
+  } else {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::PseudoLI),
+            RISCVN::X4)
+        .addImm(StackSize - 8);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADD), RISCVN::X4)
+        .addReg(SPReg)
+        .addReg(RISCVN::X4);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::LW), FPReg)
+        .addImm(0)
+        .addReg(RISCVN::X4);
+  }
+  if (isSimm12(StackSize)) {
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADDI), SPReg)
+        .addReg(SPReg)
+        .addImm(StackSize);
+  } else {
+    // auto TmpReg =
+    // MF.getRegInfo().createVirtualRegister(&RISCVN::GPRRegClass);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::PseudoLI),
+            RISCVN::X4)
+        .addImm(StackSize);
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(RISCVN::ADD), FPReg)
+        .addReg(SPReg)
+        .addReg(RISCVN::X4);
+  }
 }
 
 bool RISCVNFrameLowering::hasFP(const MachineFunction &MF) const {

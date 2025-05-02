@@ -34,6 +34,17 @@ def simm12 : RISCVNSImmLeafOp<12> {
       }];
 }
 
+def Hi20 : Operand<i32> {
+  let EncoderMethod = "getImmHi20";
+  let PrintMethod   = "printImmHi20";
+}
+
+def Lo12 : Operand<i32> {
+  let EncoderMethod = "getImmLo12";
+  let PrintMethod   = "printImmLo12";
+}
+
+
 def retglue : SDNode<"RISCVNISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
@@ -70,6 +81,12 @@ def ADDI : I<OPC_ADDI,
             "addi $rd, $rs1, $imm12",
             []>;
 
+def XORI : I<OPC_XORI,
+            (outs GPR:$rd),
+            (ins GPR:$rs1, simm12:$imm12),
+            "xori $rd, $rs1, $imm12",
+            []>;
+
 def SLTI : I<OPC_SLTI,
             (outs GPR:$rd),
             (ins GPR:$rs1, simm12:$imm12),
@@ -82,6 +99,7 @@ def SLTIU : I<OPC_SLTIU,
             "sltiu $rd, $rs1, $imm12",
             []>;
 
+
 let mayStore = false, mayLoad = true in {
     def LW : I<OPC_LW,
                 (outs GPR:$rd),
@@ -92,6 +110,7 @@ let mayStore = false, mayLoad = true in {
 
 def : Pat<(i32 (simm12:$imm12)), (ADDI X0, simm12:$imm12)>;
 def : Pat<(add GPR:$val, simm12:$imm12), (ADDI GPR:$val, simm12:$imm12)>;
+def : Pat<(xor GPR:$val, simm12:$imm12), (XORI GPR:$val, simm12:$imm12)>;
 
 def : Pat<(load GPR:$addr), (LW 0, GPR:$addr)>;
 def : Pat<(load tframeindex:$addr), (LW 0, GPR:$addr)>;
@@ -165,6 +184,30 @@ def XOR : R<OPC_XOR,
             "xor $rd, $rs1, $rs2",
             []>;
 
+def DIV : R<OPC_DIV,
+            (outs GPR:$rd),
+            (ins GPR:$rs1, GPR:$rs2),
+            "div $rd, $rs1, $rs2",
+            []>;
+
+def MUL : R<OPC_MUL,
+            (outs GPR:$rd),
+            (ins GPR:$rs1, GPR:$rs2),
+            "mul $rd, $rs1, $rs2",
+            []>;
+
+def MULH : R<OPC_MULH,
+            (outs GPR:$rd),
+            (ins GPR:$rs1, GPR:$rs2),
+            "mulh $rd, $rs1, $rs2",
+            []>;
+
+def REM : R<OPC_REM,
+            (outs GPR:$rd),
+            (ins GPR:$rs1, GPR:$rs2),
+            "rem $rd, $rs1, $rs2",
+            []>;
+
 
 def : Pat<(add GPR:$a, GPR:$b), (ADD GPR:$a, GPR:$b)>;
 def : Pat<(sub GPR:$a, GPR:$b), (SUB GPR:$a, GPR:$b)>;
@@ -178,9 +221,15 @@ def : Pat<(setlt GPR:$a, GPR:$b), (SLT GPR:$a, GPR:$b)>;
 def : Pat<(setgt GPR:$a, GPR:$b), (SLT GPR:$b, GPR:$a)>;
 def : Pat<(setult GPR:$a, GPR:$b), (SLTU GPR:$a, GPR:$b)>;
 def : Pat<(setugt GPR:$a, GPR:$b), (SLTU GPR:$b, GPR:$a)>;
-
 def : Pat<(seteq GPR:$a, GPR:$b), (SLTIU (XOR GPR:$a, GPR:$b), 1)>;
 def : Pat<(setne GPR:$a, GPR:$b), (SLTU X0, (XOR GPR:$a, GPR:$b))>;
+def : Pat<(setle GPR:$a, GPR:$b), (XORI (SLT GPR:$b, GPR:$a), 1)>;
+def : Pat<(setge GPR:$a, GPR:$b), (XORI (SLT GPR:$a, GPR:$b), 1)>;
+
+def : Pat<(sdiv GPR:$a, GPR:$b), (DIV GPR:$a, GPR:$b)>;
+def : Pat<(mul GPR:$a, GPR:$b), (MUL GPR:$a, GPR:$b)>;
+def : Pat<(mulhs GPR:$a, GPR:$b), (MULH GPR:$a, GPR:$b)>;
+def : Pat<(srem GPR:$a, GPR:$b), (REM GPR:$a, GPR:$b)>;
 
 
 let isBranch = true, isTerminator = true, isBarrier = true in {
@@ -235,6 +284,8 @@ def : Pat<(brcc SETNE, GPR:$rs1, GPR:$rs2, bb:$addr), (BNE GPR:$rs1, GPR:$rs2, j
 def : Pat<(brcc SETEQ, GPR:$rs1, GPR:$rs2, bb:$addr), (BEQ GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
 def : Pat<(brcc SETGT, GPR:$rs1, GPR:$rs2, bb:$addr), (BLT GPR:$rs2, GPR:$rs1, jmptarget:$addr)>;
 def : Pat<(brcc SETLT, GPR:$rs1, GPR:$rs2, bb:$addr), (BLT GPR:$rs1, GPR:$rs2, jmptarget:$addr)>;
+def : Pat<(brcc SETGE, GPR:$rs1, GPR:$rs2, bb:$addr), (BNE (XORI (SLT GPR:$rs1, GPR:$rs2), 1), X0, jmptarget:$addr)>;
+def : Pat<(brcc SETLE, GPR:$rs1, GPR:$rs2, bb:$addr), (BNE (XORI (SLT GPR:$rs2, GPR:$rs1), 1), X0, jmptarget:$addr)>;
 
 
 def hi : SDNode<"RISCVNISD::HI", SDTIntUnaryOp>;
@@ -254,12 +305,19 @@ def riscvn_select : PseudoInst<(outs GPR:$dst),
 
 
 
-let isAsmParserOnly = 1 in
-def PseudoLI : PseudoInst<
-            (outs GPR:$rd),
-            (ins i32imm:$imm12),
-            [],
-            "li $rd, $imm12">;         
+//let isAsmParserOnly = 1 in
+//def PseudoLI : PseudoInst<
+//            (outs GPR:$rd),
+//            (ins i32:$imm),
+//            [(set i32:$rd, imm:$imm)]>;
+//def : Pat<(i32 i32imm:$imm), (PseudoLI i32imm:$imm)>;
+
+//def : Pat<(i32 imm:$val),
+//          (ADDI (LUI Hi20:$val), Lo12:$val)>;
+
+def PseudoLI : PseudoInst<(outs GPR:$rd), (ins i32imm:$imm),
+                      [(set i32:$rd, imm:$imm)], "li $rd, $imm">;
+
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
   def PseudoRET : PseudoInst<

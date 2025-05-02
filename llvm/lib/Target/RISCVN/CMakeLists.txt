@@ -25,6 +25,7 @@ add_llvm_target(RISCVNCodeGen
         RISCVNSubtarget.cpp
         RISCVNTargetMachine.cpp
         RISCVNMCInstLower.cpp
+        RISCVNExpandPseudoInst.cpp
 
         LINK_COMPONENTS
         AsmPrinter

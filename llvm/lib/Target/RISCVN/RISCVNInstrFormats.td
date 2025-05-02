@@ -29,6 +29,9 @@ class UTypeOpcode<string name, bits<7> opcode>
 
 // I type inst
 def OPC_ADDI : ITypeOpcode<"ADDI", 0b0010011, 0b000>;
+def OPC_XORI : ITypeOpcode<"XORI", 0b0010011, 0b100>;
+def OPC_ORI : ITypeOpcode<"ORI", 0b0010011, 0b110>;
+def OPC_ANDI : ITypeOpcode<"ANDI", 0b0010011, 0b111>;
 def OPC_SLTI : ITypeOpcode<"SLTI", 0b0010011, 0b010>;
 def OPC_SLTIU : ITypeOpcode<"SLTIU", 0b0010011, 0b011>;
 def OPC_JALR : ITypeOpcode<"JALR", 0b1100111, 0b000>;
@@ -45,6 +48,12 @@ def OPC_SRL : RTypeOpcode<"SRL", 0b101, 0b0000000>;
 def OPC_SRA : RTypeOpcode<"SRA", 0b010, 0b0100000>;
 def OPC_OR : RTypeOpcode<"OR", 0b110, 0b0000000>;
 def OPC_AND : RTypeOpcode<"AND", 0b111, 0b0000000>;
+def OPC_MUL : RTypeOpcode<"MUL", 0b000, 0b0000001>;
+def OPC_MULH : RTypeOpcode<"MULH", 0b001, 0b0000001>;
+def OPC_DIV : RTypeOpcode<"DIV", 0b100, 0b0000001>;
+def OPC_DIVU : RTypeOpcode<"DIVU", 0b101, 0b0000001>;
+def OPC_REM : RTypeOpcode<"REM", 0b110, 0b0000001>;
+def OPC_REMU : RTypeOpcode<"REMU", 0b111, 0b0000001>;
 
 // S type inst
 def OPC_SW : STypeOpcode<"SW", 0b010>;
