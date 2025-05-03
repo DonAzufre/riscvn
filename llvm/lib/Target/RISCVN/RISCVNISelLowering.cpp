@@ -49,6 +49,9 @@ SDValue RISCVNTargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_RISCVN);
 
+  // Used with vargs to acumulate store chains.
+  std::vector<SDValue> OutChains;
+
   for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
     SDValue ArgValue;
     CCValAssign &VA = ArgLocs[I];
@@ -87,11 +90,13 @@ SDValue RISCVNTargetLowering::LowerFormalArguments(
       InVals.push_back(ArgValue);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      report_fatal_error("RISCVN - LowerFormalArguments - "
-                         "Memory argument not implemented");
+      // report_fatal_error("RISCVN - LowerFormalArguments - "
+      //                    "Memory argument not implemented");
       assert(LocVT.getSizeInBits() / 8 == 4);
+
+      // skip ra and fp
       int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
-                                     VA.getLocMemOffset(), true);
+                                     VA.getLocMemOffset() + 8, true);
       SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
 
       ISD::LoadExtType ExtType;
@@ -109,6 +114,8 @@ SDValue RISCVNTargetLowering::LowerFormalArguments(
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI),
           VA.getValVT());
 
+      OutChains.push_back(ArgValue.getValue(1));
+
       InVals.push_back(ArgValue);
     }
   }
@@ -116,6 +123,11 @@ SDValue RISCVNTargetLowering::LowerFormalArguments(
   if (IsVarArg) {
     llvm_unreachable("RISCVN - LowerFormalArguments - "
                      "VarArgs not Implemented");
+  }
+
+  if (!OutChains.empty()) {
+    OutChains.push_back(Chain);
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains);
   }
 
   return Chain;
@@ -239,7 +251,7 @@ RISCVNTargetLowering::LowerCall(CallLoweringInfo &CLI,
       RegsToPass.emplace_back(VA.getLocReg(), ArgValue);
     else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      report_fatal_error("args of memloc not implemented");
+      // report_fatal_error("args of memloc not implemented");
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, DL, RISCVN::X2, PtrVT);
       SDValue Address =

@@ -16,6 +16,7 @@ MachineBasicBlock::iterator RISCVNFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI) const {
   Register SPReg = RISCVN::X2;
+  Register TPReg = RISCVN::X4;
   DebugLoc DL = MI->getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
@@ -23,18 +24,26 @@ MachineBasicBlock::iterator RISCVNFrameLowering::eliminateCallFramePseudoInstr(
 
   int64_t Amount = MI->getOperand(0).getImm();
 
-  assert(isSimm12(Amount));
   if (Amount != 0) {
     // align sp here
     if (MI->getOpcode() == RISCVN::ADJCALLSTACKDOWN)
       Amount = -Amount;
 
     const RISCVNRegisterInfo &RI = *STI.getRegisterInfo();
-    assert(isSimm12(Amount));
-    BuildMI(MBB, MI, DL, TII.get(RISCVN::ADDI), SPReg)
-        .addReg(SPReg)
-        .addImm(Amount)
-        .setMIFlag(MachineInstr::NoFlags);
+    if (isSimm12(Amount))
+      BuildMI(MBB, MI, DL, TII.get(RISCVN::ADDI), SPReg)
+          .addReg(SPReg)
+          .addImm(Amount)
+          .setMIFlag(MachineInstr::NoFlags);
+    else {
+      BuildMI(MBB, MI, DL, TII.get(RISCVN::PseudoLI), TPReg)
+          .addImm(Amount)
+          .setMIFlag(MachineInstr::NoFlags);
+      BuildMI(MBB, MI, DL, TII.get(RISCVN::ADD), SPReg)
+          .addReg(SPReg)
+          .addReg(TPReg)
+          .setMIFlag(MachineInstr::NoFlags);
+    }
   }
 
   return MBB.erase(MI);
