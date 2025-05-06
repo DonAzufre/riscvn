@@ -1,4 +1,4 @@
-//
+﻿//
 // Created by myrica on 4/16/25.
 //
 
@@ -44,7 +44,7 @@ llvm::MCFragment *llvm::RISCVNMCExpr::findAssociatedFragment() const {
   return getSubExpr()->findAssociatedFragment();
 }
 void llvm::RISCVNMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &) const {
-  llvm_unreachable(__PRETTY_FUNCTION__);
+  llvm_unreachable(__func__);
 }
 
 llvm::StringRef llvm::RISCVNMCExpr::getVariantKindName(VariantKind Kind) {

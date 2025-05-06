@@ -1,4 +1,4 @@
-//===--- Triple.cpp - Target triple helper class --------------------------===//
+﻿//===--- Triple.cpp - Target triple helper class --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -87,6 +87,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case xcore:          return "xcore";
   case xtensa:         return "xtensa";
   case riscvn:         return "riscvn";
+  case ftxt4k:         return "ftxt4k";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -236,6 +237,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case xtensa:      return "xtensa";
 
   case riscvn:      return "riscvn";
+
+  case ftxt4k:      return "ftxt4k";
   }
 }
 
@@ -465,6 +468,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("dxil", dxil)
     .Case("xtensa", xtensa)
     .Case("riscvn", riscvn)
+    .Case("ftxt4k", ftxt4k)
     .Default(UnknownArch);
 }
 
@@ -614,6 +618,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
                  Triple::dxil)
           .Case("xtensa", Triple::xtensa)
           .Case("riscvn", Triple::riscvn)
+          .Case("ftxt4k", Triple::ftxt4k)
           .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -951,6 +956,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::xcore:
   case Triple::xtensa:
   case Triple::riscvn:
+  case Triple::ftxt4k:
     return Triple::ELF;
 
   case Triple::ppc64:
@@ -1669,6 +1675,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::ve:
   case llvm::Triple::wasm64:
   case llvm::Triple::x86_64:
+  case llvm::Triple::ftxt4k:
     return 64;
   }
   llvm_unreachable("Invalid architecture value");
@@ -1697,6 +1704,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::msp430:
   case Triple::systemz:
   case Triple::ve:
+  case Triple::ftxt4k:
     T.setArch(UnknownArch);
     break;
 
@@ -1815,6 +1823,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::ve:
   case Triple::wasm64:
   case Triple::x86_64:
+  case Triple::ftxt4k:
     // Already 64-bit.
     break;
 
@@ -1898,6 +1907,7 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::arm:
   case Triple::thumb:
   case Triple::riscvn:
+  case Triple::ftxt4k:
     T.setArch(UnknownArch);
     break;
 
@@ -2005,6 +2015,7 @@ bool Triple::isLittleEndian() const {
   case Triple::xcore:
   case Triple::xtensa:
   case Triple::riscvn:
+  case Triple::ftxt4k:
     return true;
   default:
     return false;

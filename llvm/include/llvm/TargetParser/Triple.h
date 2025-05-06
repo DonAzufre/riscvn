@@ -1,4 +1,4 @@
-//===-- llvm/TargetParser/Triple.h - Target triple helper class--*- C++ -*-===//
+﻿//===-- llvm/TargetParser/Triple.h - Target triple helper class--*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -107,6 +107,7 @@ public:
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     riscvn,
+    ftxt4k,
     ve,             // NEC SX-Aurora Vector Engine
     LastArchType = ve
   };
@@ -1025,6 +1026,8 @@ public:
   bool isRISCVN() const { 
     return getArch() == Triple::riscvn; 
   }
+
+  bool isFTXT4K() const { return getArch() == Triple::ftxt4k; }
 
   /// Tests whether the target is VE
   bool isVE() const {
