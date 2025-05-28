@@ -14,8 +14,8 @@ namespace llvm {
 
     FunctionPass *createFTXT4KISelDag(FTXT4KTargetMachine &TM,
                                       CodeGenOptLevel OptLevel);
-    FunctionPass *createFTXT4KExpandPseudoPass();
 
-    void initializeFTXT4KExpandPseudoPass(PassRegistry &);
+    FunctionPass *createFTXT4KAddMemFencePass();
+    void initializeFTXT4KAddMemFencePass(PassRegistry &);
 } // namespace llvm
 #endif //FTXT4K_H

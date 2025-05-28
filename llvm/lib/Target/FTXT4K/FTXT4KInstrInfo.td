@@ -80,6 +80,14 @@ def SSTW : Ins40LS<
     "SSTW\t$dst,\t*+$ar[$ucst18]",
     []>;
 
+let mayStore = false, mayLoad = true in
+def SLDW : Ins40LS<
+    0b0010,
+    (outs GPR:$dst),
+    (ins SAR_40LS:$ar, ucst18:$ucst18),
+    "SLDW\t*+$ar[$ucst18],\t$dst",
+    []>;
+
 def SADDI : Ins40SD<
     0b0100101000,
     0b001, // .M1
@@ -87,6 +95,25 @@ def SADDI : Ins40SD<
     (ins scst6:$src1, GPR:$src2),
     "SADD\t.M1\t$src1,\t$src2,\t$dst",
     []>;
+
+def SADD : Ins40SD<
+    0b0100111000,
+    0b001, // .M1
+    (outs GPR:$dst),
+    (ins GPR:$src1, GPR:$src2),
+    "SADD\t.M1\t$src1,\t$src2,\t$dst",
+    []>;
+
+def SMFENCE : Ins40SD<
+    0b0101000000,
+    0b101, // no unit
+    (outs ),
+    (ins ),
+    "SMFENCE",
+    []>;
+
+
+def : Pat<(add GPR:$a, GPR:$b), (SADD GPR:$a, GPR:$b)>;
 
 def SMVAGA : Ins40SD<
     0b0111010000,
@@ -97,6 +124,7 @@ def SMVAGA : Ins40SD<
     []>;
 
 def : Pat<(store i64:$val, GPR:$base), (SSTW GPR:$val, (SMVAGA GPR:$base), 0)>;
+def : Pat<(load GPR:$base), (SLDW (SMVAGA GPR:$base), 0)>;
 
 def retglue : SDNode<"FTXT4KISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;

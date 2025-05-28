@@ -148,9 +148,9 @@ class Ins40LS<bits<4> InsType, dag outs, dag ins, string asm, list<dag> pattern>
 class Ins40SD<bits<10> op, bits<3> unit, dag outs, dag ins, string asm, list<dag> pattern>
     : Ins40Base<outs, ins, asm, pattern> {
 
-    bits<6> src1;
+    bits<6> src1 = 0b000000;
     bits<6> src2 = 0b000000;
-    bits<6> dst;
+    bits<6> dst = 0b000000;
     bits<3> U = unit;
 
     let Inst{2-4} = 0b111;

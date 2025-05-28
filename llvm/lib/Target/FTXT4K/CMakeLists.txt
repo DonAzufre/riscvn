@@ -25,6 +25,7 @@ add_llvm_target(FTXT4KCodeGen
         FTXT4KSubtarget.cpp
         FTXT4KTargetMachine.cpp
         FTXT4KMCInstLower.cpp
+        FTXT4KAddMemFence.cpp
 
         LINK_COMPONENTS
         AsmPrinter

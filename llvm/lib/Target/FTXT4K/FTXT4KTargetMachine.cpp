@@ -45,6 +45,10 @@ public:
   FTXT4KPassConfig(FTXT4KTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
+protected:
+  void addPreEmitPass() override;
+
+public:
   FTXT4KTargetMachine &getFTXT4KTargetMachine() const {
     return getTM<FTXT4KTargetMachine>();
   }
@@ -55,6 +59,10 @@ public:
 
 TargetPassConfig *FTXT4KTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new FTXT4KPassConfig(*this, PM);
+}
+
+void FTXT4KPassConfig::addPreEmitPass() {
+  addPass(createFTXT4KAddMemFencePass());
 }
 
 bool FTXT4KPassConfig::addInstSelector() {
