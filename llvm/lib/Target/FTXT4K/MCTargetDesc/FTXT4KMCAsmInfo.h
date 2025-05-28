@@ -14,6 +14,8 @@ namespace llvm {
 
     class FTXT4KMCAsmInfo : public MCAsmInfoELF {
     public:
+        bool shouldOmitSectionDirective(StringRef SectionName) const override;
+
         explicit FTXT4KMCAsmInfo(const Triple &TargetTriple);
     };
 } // namespace llvm

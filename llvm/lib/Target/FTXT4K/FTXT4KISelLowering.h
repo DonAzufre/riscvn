@@ -16,8 +16,17 @@ namespace llvm {
     }
 
     class FTXT4KTargetLowering : public TargetLowering {
-        const FTXT4KSubtarget* Subtarget;
     public:
+        MVT getPointerTy(const DataLayout &DL, uint32_t AS) const override;
+
+        void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const override;
+
+    private:
+        const FTXT4KSubtarget* Subtarget;
+
+    public:
+        SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+
     public:
         explicit FTXT4KTargetLowering(const TargetMachine &TM,
                                       const FTXT4KSubtarget &STI);

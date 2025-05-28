@@ -9,7 +9,6 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
-
     class LLVM_LIBRARY_VISIBILITY FTXT4KAsmPrinter : public AsmPrinter {
         FTXT4KMCInstLower MCInstLowering;
 
@@ -18,6 +17,10 @@ namespace llvm {
                                   std::unique_ptr<MCStreamer> Streamer);
 
         StringRef getPassName() const override { return "FTXT4K Assembly Printer"; }
+
+        void emitStartOfAsmFile(Module &) override;
+
+        void emitFunctionBodyEnd() override;
 
         void emitInstruction(const MachineInstr *MI) override;
 

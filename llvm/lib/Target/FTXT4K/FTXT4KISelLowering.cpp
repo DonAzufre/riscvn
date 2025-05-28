@@ -13,14 +13,50 @@ using namespace llvm;
 
 #include "FTXT4KGenCallingConv.inc"
 
+MVT FTXT4KTargetLowering::getPointerTy(const DataLayout &DL, uint32_t AS) const {
+  return MVT::i64;
+}
+
+void FTXT4KTargetLowering::ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  switch (N->getOpcode()) {
+    default:
+      report_fatal_error("ftxt4k: replace node results failed.");
+    case ISD::FrameIndex: {
+      int FI = cast<FrameIndexSDNode>(N)->getIndex();
+
+      SDValue TFI = DAG.getTargetFrameIndex(FI, MVT::i32);
+      SDValue TFI_ext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, TFI);
+      Results.push_back(TFI_ext);
+    }
+    break;
+  }
+}
+
+SDValue FTXT4KTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+    default:
+      report_fatal_error("ftxt4k: lower operation failed.");
+    case ISD::FrameIndex: {
+      int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+      SDValue TFI = DAG.getTargetFrameIndex(FI, MVT::i64);
+      return TFI;
+    }
+    break;
+  }
+}
+
 FTXT4KTargetLowering::FTXT4KTargetLowering(const TargetMachine &TM,
                                            const FTXT4KSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
   // Set up the register classes.
-  addRegisterClass(MVT::i32, &FTXT4K::GPRRegClass);
+  addRegisterClass(MVT::i64, &FTXT4K::GPRRegClass);
 
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
+
+
+
 }
 
 SDValue FTXT4KTargetLowering::LowerFormalArguments(
@@ -65,7 +101,7 @@ FTXT4KTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 const char *FTXT4KTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((FTXT4KISD::NodeType)Opcode) {
   case FTXT4KISD::RET_GLUE:
-    return "SXGPUISD::RET_GLUE";
+    return "FTXT4KISD::RET_GLUE";
   default:
     return nullptr;
   }

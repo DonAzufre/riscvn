@@ -30,3 +30,5 @@ def SCD : RegisterClass<"FTXT4K", [i64], 64,
 def SAR : RegisterClass<"FTXT4K", [i64], 64,
     (sequence "AR%u", 8, 15)>;
 
+def SAR_40LS : RegisterClass<"FTXT4K", [i64], 64,
+    (sequence "AR%u", 12, 15)>;

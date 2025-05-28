@@ -127,3 +127,36 @@ class Ins40Br<dag outs, dag ins, string asm, list<dag> pattern>
     let Inst{6-5} = op;
     let Inst{4-2} = 0b110;
 }
+
+class Ins40LS<bits<4> InsType, dag outs, dag ins, string asm, list<dag> pattern>
+    : Ins40Base<outs, ins, asm, pattern> {
+
+    bits<18> ucst18;
+    bits<6> dst;
+    bits<4> ar;
+    bit Reserved = 0b0;
+
+    let Inst{2-4} = 0b010;
+    let Inst{5} = Reserved;
+    let Inst{6-7} = ar{2-3};
+    let Inst{8-11} = InsType;
+    let Inst{12-29} = ucst18;
+    let Inst{30-35} = dst;
+}
+
+// ins 40bit with Single or Double operands
+class Ins40SD<bits<10> op, bits<3> unit, dag outs, dag ins, string asm, list<dag> pattern>
+    : Ins40Base<outs, ins, asm, pattern> {
+
+    bits<6> src1;
+    bits<6> src2 = 0b000000;
+    bits<6> dst;
+    bits<3> U = unit;
+
+    let Inst{2-4} = 0b111;
+    let Inst{5-7} = U;
+    let Inst{8-17} = op;
+    let Inst{18-23} = src2;
+    let Inst{24-29} = src1;
+    let Inst{30-25} = dst;
+}

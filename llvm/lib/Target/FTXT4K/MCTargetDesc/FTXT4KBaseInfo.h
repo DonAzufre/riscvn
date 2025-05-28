@@ -10,6 +10,8 @@ namespace llvm {
     namespace FTXT4KOp {
         enum OperandType : unsigned {
             OPERAND_SIMM64,
+            OPERAND_UIMM18,
+            OPERAND_SIMM6,
         };
     }
 }

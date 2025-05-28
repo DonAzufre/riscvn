@@ -19,7 +19,7 @@ FTXT4KSubtarget &
 FTXT4KSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                  const TargetMachine &TM) {
     if (CPU.empty()) {
-        CPU = "riscvn";
+        CPU = "ftxt4k";
     }
     ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
 

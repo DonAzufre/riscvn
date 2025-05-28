@@ -7,4 +7,16 @@
 
 using namespace llvm;
 
-FTXT4KMCAsmInfo::FTXT4KMCAsmInfo(const Triple &TT) { CommentString = ";"; }
+bool FTXT4KMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
+    return false;
+}
+
+FTXT4KMCAsmInfo::FTXT4KMCAsmInfo(const Triple &TT) {
+    CommentString = ";";
+    LinkerPrivateGlobalPrefix = "$";
+    PrivateGlobalPrefix= "$";
+    UsesELFSectionDirectiveForBSS = false;
+    GlobalDirective = "\t.global\t";
+    HasDotTypeDotSizeDirective = false;
+    HasSingleParameterDotFile = false;
+}

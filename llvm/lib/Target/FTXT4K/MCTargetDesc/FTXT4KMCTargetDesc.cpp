@@ -45,7 +45,7 @@ static MCRegisterInfo *createFTXT4KMCRegisterInfo(const Triple &TT) {
 static MCSubtargetInfo *
 createFTXT4KMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPU.empty()) {
-    CPU = "riscvn";
+    CPU = "ftxt4k";
   }
   return createFTXT4KMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
