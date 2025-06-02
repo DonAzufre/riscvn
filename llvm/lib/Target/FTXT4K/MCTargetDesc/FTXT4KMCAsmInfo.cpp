@@ -15,6 +15,7 @@ FTXT4KMCAsmInfo::FTXT4KMCAsmInfo(const Triple &TT) {
     CommentString = ";";
     LinkerPrivateGlobalPrefix = "$";
     PrivateGlobalPrefix= "$";
+    PrivateLabelPrefix = "LBB";
     UsesELFSectionDirectiveForBSS = false;
     GlobalDirective = "\t.global\t";
     HasDotTypeDotSizeDirective = false;

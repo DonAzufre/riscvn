@@ -62,7 +62,7 @@ TargetPassConfig *FTXT4KTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void FTXT4KPassConfig::addPreEmitPass() {
-  addPass(createFTXT4KAddMemFencePass());
+  addPass(createFTXT4KFixInstConstrainPass());
 }
 
 bool FTXT4KPassConfig::addInstSelector() {

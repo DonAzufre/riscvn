@@ -117,11 +117,10 @@ class Ins40Triple<dag outs, dag ins, string asm, list<dag> pattern>
     let Inst{4-2} = 0b011;
 }
 
-class Ins40Br<dag outs, dag ins, string asm, list<dag> pattern>
+class Ins40Br<bits<2> op, dag outs, dag ins, string asm, list<dag> pattern>
     : Ins40Base<outs, ins, asm, pattern> {
 
     bits<29> imm29;
-    bits<2> op;
 
     let Inst{35-7} = imm29;
     let Inst{6-5} = op;

@@ -5,6 +5,7 @@
 #include "FTXT4KInstPrinter.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
 
@@ -32,4 +33,18 @@ void FTXT4KInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     } else {
         assert(Op.isExpr() && "Expected an expression");
     }
+}
+
+void FTXT4KInstPrinter::printJmpTargetOperand(const MCInst *MI, uint64_t Address, unsigned OpNo, raw_ostream &O,
+    const char *Modifier) {
+    assert(MI->getOperand(OpNo).isExpr() && "jmptarget must be a label(Expr).");
+    MI->getOperand(OpNo).getExpr()->print(O, &MAI);
+}
+
+void FTXT4KInstPrinter::printCondExecuteCtlOperand(const MCInst *MI, uint64_t Address, unsigned OpNo, raw_ostream &O,
+    const char *Modifier) {
+    assert(MI->getOperand(OpNo).isImm() && "cond execute control must be an imm");
+    const auto imm = MI->getOperand(OpNo).getImm();
+    if (imm != 0)
+        O << "!";
 }

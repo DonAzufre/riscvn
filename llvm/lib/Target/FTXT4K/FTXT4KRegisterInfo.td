@@ -19,7 +19,7 @@ foreach I = 0-15 in {
 }
 
 def GPR : RegisterClass<"FTXT4K", [i64], 64,
-    (add (sequence "R%u", 0, 63))>;
+    (add (sequence "R%u", 7, 63), (sequence "R%u", 0, 6))>;
 
 // scalar conditional reg
 def SCD : RegisterClass<"FTXT4K", [i64], 64,

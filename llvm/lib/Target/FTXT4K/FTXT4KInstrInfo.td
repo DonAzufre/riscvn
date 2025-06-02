@@ -65,6 +65,19 @@ def ucst18 : FTXT4KUImmLeafOp<18> {
       }];
 }
 
+def jmptarget : Operand<OtherVT> {
+  let EncoderMethod = "getPCRelBranchTargetOpValue";
+  let OperandType = "OPERAND_PCREL";
+  let PrintMethod = "printJmpTargetOperand";
+}
+
+def condexctl : Operand<i32> {
+    // just to fool tablegen
+    let EncoderMethod = "getPCRelBranchTargetOpValue";
+    let OperandType = "OPERAND_PCREL";
+    let PrintMethod = "printCondExecuteCtlOperand";
+}
+
 def SMOVI : Ins80Mov<
     0b01, // .M1
     (outs GPR:$dst),
@@ -112,6 +125,30 @@ def SMFENCE : Ins40SD<
     "SMFENCE",
     []>;
 
+def SNOP : Ins40SD<
+    0b0010000000,
+    0b101,
+    (outs ),
+    (ins scst6:$src1),
+    "SNOP\t$src1",
+    []>;
+
+def SLTI : Ins40SD<
+    0b1111010010,
+    0b101,
+    (outs SCD:$dst),
+    (ins scst6:$src1, GPR:$src2),
+    "SLT\t$src1,\t$src2,\t$dst",
+    []>;
+
+def SLT : Ins40SD<
+    0b1110010010,
+    0b101,
+    (outs SCD:$dst),
+    (ins GPR:$src1, GPR:$src2),
+    "SLT\t$src1,\t$src2,\t$dst",
+    []>;
+
 
 def : Pat<(add GPR:$a, GPR:$b), (SADD GPR:$a, GPR:$b)>;
 
@@ -136,3 +173,24 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
               "; return inst should be here",
               [(retglue)]>;
 }
+
+let isBranch = true, isTerminator = true, isBarrier = true in {
+def SBR : Ins40Br<
+    0b00,
+    (outs ),
+    (ins jmptarget:$imm29),
+    "SBR\t$imm29",
+    []>;
+
+def CONDSBR : Ins40Br<
+    0b01, // todo: change this
+    (outs ),
+    (ins jmptarget:$imm29, SCD:$CondReg, condexctl:$V),
+    "[${V}${CondReg}]\tSBR\t$imm29",
+    []>;
+
+}
+
+def : Pat<(br bb:$addr), (SBR jmptarget:$addr)>;
+def : Pat<(brcc SETLT, GPR:$a, GPR:$b, bb:$addr), (CONDSBR jmptarget:$addr, (SLT GPR:$a, GPR:$b), 0)>;
+def : Pat<(brcc SETGT, GPR:$a, GPR:$b, bb:$addr), (CONDSBR jmptarget:$addr, (SLT GPR:$b, GPR:$a), 0)>;
